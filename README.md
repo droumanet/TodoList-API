@@ -44,3 +44,7 @@ git commit -m "version 1.0 : initiale"
 git tag -a initiale -m "version 1.0 : initiale"
 git push origin initiale
 ```
+Par défaut, les tags ne sont pas clonés vers le dépôt distant, il faut donc ajouter à la fin du projet
+
+`git push origin --tags`
+
