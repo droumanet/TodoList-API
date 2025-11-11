@@ -1,6 +1,6 @@
 {
   "name": "todolist-api",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "API REST concept with TodoList",
   "license": "ISC",
   "author": "droumanet",
@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mysql2": "^3.15.3"
   },
   "devDependencies": {
-    "vitest": "^4.0.4"
+    "vitest": "^4.0.5"
   }
 }
