@@ -1,5 +1,5 @@
 // Importer les fonctions de la base pour l'utiliser dans le contrôleur
-import {getAllTodos, getTodoById, getStats, createTodo, replaceTodo, updateTodo, deleteAllTodos} from './models/database.js'
+import db from './models/database.js'
 
 export default {
     readTodos : async (req, res) => {
@@ -27,7 +27,7 @@ export default {
             // ⚠️ VERSION VULNÉRABLE : pas de parseInt() !
             const id = req.params.id;
             const todo = await db.getTodoById(id);
-        
+            console.log("Read",todo)
             if (!todo) {
                 return res.status(404).json({
                     success: false,
