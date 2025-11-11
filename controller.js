@@ -1,18 +1,12 @@
-// Importer la classe Todo pour l'utiliser dans le contrôleur
-import Todo from './Todo.js';
-
-// PATTERN SINGLETON : Une seule collection de todos partagée
-let todos = [
-  new Todo(1, "Exemple de tâche", 1, false),
-  new Todo(2, "Autre tâche", 2, true)
-];
-let nextId = 3;
+// Importer les fonctions de la base pour l'utiliser dans le contrôleur
+import {getAllTodos, getTodoById, getStats, createTodo, replaceTodo, updateTodo, deleteAllTodos} from './models/database.js'
 
 export default {
-    readTodos : (req, res) => {
+    readTodos : async (req, res) => {
         console.log("Get /api/todos : readTodos")
         try {
         // Utilise toJSON() automatiquement via JSON.stringify()
+        const todos = await db.getAllTodos()
         res.json({
             success: true,
             data: todos,
@@ -27,33 +21,24 @@ export default {
         }
     },
 
-    readTodoId : (req, res) => {
+    readTodoId : async (req, res) => {
         console.log("Get /api/todos/{id} : readTodoId")
         try {
-        const id = parseInt(req.params.id);
+            // ⚠️ VERSION VULNÉRABLE : pas de parseInt() !
+            const id = req.params.id;
+            const todo = await db.getTodoById(id);
         
-        if (isNaN(id)) {
-            return res.status(400).json({
-                success: false,
-                error: 'ID invalide',
-                message: 'L\'ID doit être un nombre entier'
+            if (!todo) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Tâche non trouvée'
+                });
+            }
+            
+            res.json({
+                success: true,
+                data: todo
             });
-        }
-        
-        // Utilise le getter id de la classe Todo
-        const todo = todos.find(t => t.id === id);
-        
-        if (!todo) {
-            return res.status(404).json({
-                success: false,
-                error: 'Tâche non trouvée'
-            });
-        }
-        
-        res.json({
-            success: true,
-            data: todo
-        });
         } catch (error) {
             res.status(500).json({
                 success: false,
@@ -63,29 +48,28 @@ export default {
         }
     },
 
-    createTodo : (req, res) => {
+    createTodo : async (req, res) => {
         console.log("Post /api/todos : createTodo")
         try {
             const { name, priority, done } = req.body;
             // Validation déléguée au constructeur de Todo
-            const newTodo = new Todo(nextId++, name, priority, done);
-            todos.push(newTodo);
+            const newTodo = await db.createTodo(req.body);
             
             res.status(201).json({
-            success: true,
-            data: newTodo,
-            message: 'Tâche créée avec succès'
+                success: true,
+                data: newTodo,
+                message: 'Tâche créée avec succès'
             });
         } catch (error) {
             res.status(400).json({
-            success: false,
-            error: 'Erreur lors de la création de la tâche',
-            message: error.message
+                success: false,
+                error: 'Erreur lors de la création de la tâche',
+                message: error.message
             });
         }
     },
 
-    replaceTodo : (req, res) => {
+    replaceTodo : async (req, res) => {
         try {
             const id = parseInt(req.params.id);
             
@@ -97,35 +81,96 @@ export default {
             });
             }
             
-            const index = todos.findIndex(t => t.id === id);
+            const existingTodo = await db.getTodoById(id);
             
-            if (index === -1) {
-            return res.status(404).json({
-                success: false,
-                error: 'Tâche non trouvée'
-            });
+            if (!existingTodo) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Tâche non trouvée'
+                });
             }
             
             const { name, priority, done } = req.body;
             
-            // Crée une nouvelle instance Todo (remplacement complet)
-            todos[index] = new Todo(id, name, priority, done);
+            const updatedTodo = await db.replaceTodo(id, {
+                name: name.trim(),
+                priority: priority !== undefined ? priority : 1,
+                done: done !== undefined ? done : false
+            });
             
             res.json({
-            success: true,
-            data: todos[index],
-            message: 'Tâche remplacée avec succès'
+                success: true,
+                data: todos[index],
+                message: 'Tâche remplacée avec succès'
             });
         } catch (error) {
             res.status(400).json({
-            success: false,
-            error: 'Erreur lors du remplacement de la tâche',
-            message: error.message
+                success: false,
+                error: 'Erreur lors du remplacement de la tâche',
+                message: error.message
             });
         }
     },
 
-    partialReplaceTodo : (req, res) => {
+    partialReplaceTodo : async (req, res) => {
+        console.log("Patch /api/todos/{id} : partialReplaceTodo");
+        try {
+            const id = parseInt(req.params.id);
+            
+            if (isNaN(id)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'ID invalide',
+                    message: 'L\'ID doit être un nombre entier'
+                });
+            }
+            
+            // Vérifier que la tâche existe
+            const existingTodo = await db.getTodoById(id);
+            if (!existingTodo) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Tâche non trouvée'
+                });
+            }
+            
+            // Préparer les données à mettre à jour
+            const updateData = {};
+            if (req.body.name !== undefined) {
+                if (typeof req.body.name !== 'string' || req.body.name.trim() === '') {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Le nom doit être une chaîne non vide'
+                    });
+                }
+                updateData.name = req.body.name.trim();
+            }
+            if (req.body.priority !== undefined) {
+                updateData.priority = req.body.priority;
+            }
+            if (req.body.done !== undefined) {
+                updateData.done = req.body.done;
+            }
+            
+            const updatedTodo = await db.updateTodo(id, updateData);
+            
+            res.json({
+                success: true,
+                data: updatedTodo,
+                message: 'Tâche modifiée avec succès'
+            });
+        } catch (error) {
+            console.error('Erreur partialReplaceTodo:', error);
+            res.status(400).json({
+                success: false,
+                error: 'Erreur lors de la modification de la tâche',
+                message: error.message
+            });
+        }
+    },
+
+    deleteTodo : async (req, res) => {
+        console.log("Delete /api/todos/{id} : deleteTodo");
         try {
             const id = parseInt(req.params.id);
             
@@ -137,54 +182,16 @@ export default {
             });
             }
             
-            const todo = todos.find(t => t.id === id);
-            
-            if (!todo) {
-            return res.status(404).json({
-                success: false,
-                error: 'Tâche non trouvée'
-            });
+         // Vérifier que la tâche existe
+            const existingTodo = await db.getTodoById(id);
+            if (!existingTodo) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Tâche non trouvée'
+                });
             }
             
-            // Utilise la méthode update() de la classe Todo
-            todo.update(req.body);
-            
-            res.json({
-            success: true,
-            data: todo,
-            message: 'Tâche modifiée avec succès'
-            });
-        } catch (error) {
-            res.status(400).json({
-            success: false,
-            error: 'Erreur lors de la modification de la tâche',
-            message: error.message
-            });
-        }
-    },
-
-    deleteTodo : (req, res) => {
-        try {
-            const id = parseInt(req.params.id);
-            
-            if (isNaN(id)) {
-            return res.status(400).json({
-                success: false,
-                error: 'ID invalide',
-                message: 'L\'ID doit être un nombre entier'
-            });
-            }
-            
-            const index = todos.findIndex(t => t.id === id);
-            
-            if (index === -1) {
-            return res.status(404).json({
-                success: false,
-                error: 'Tâche non trouvée'
-            });
-            }
-            
-            todos.splice(index, 1);
+            await db.deleteTodo(id);
             res.status(204).send();
         } catch (error) {
             res.status(500).json({
@@ -196,28 +203,17 @@ export default {
     },
 
     // Utilitaires
-    getStats : (req, res) => {
+    getStats: async (req, res) => {
+        console.log("Get /api/stats : getStats");
         try {
-            const total = todos.length;
-            const completed = todos.filter(t => t.done).length;
-            const pending = total - completed;
-            const byPriority = {
-                high: todos.filter(t => t.priority === 1).length,
-                medium: todos.filter(t => t.priority === 2).length,
-                low: todos.filter(t => t.priority === 3).length
-            };
+            const stats = await db.getStats();
             
             res.json({
                 success: true,
-                data: {
-                    total,
-                    completed,
-                    pending,
-                    completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-                    byPriority
-                }
+                data: stats
             });
         } catch (error) {
+            console.error('Erreur getStats:', error);
             res.status(500).json({
                 success: false,
                 error: 'Erreur lors du calcul des statistiques',
@@ -226,22 +222,22 @@ export default {
         }
     },
 
-    deleteAll : (req, res) => {
+    deleteAll: async (req, res) => {
+        console.log("Delete /api/todos : deleteAll");
         try {
-            const deletedCount = todos.length;
-            todos = [];
-            nextId = 1;
+            const deletedCount = await db.deleteAllTodos();
             
             res.json({
-            success: true,
-            message: `${deletedCount} tâche(s) supprimée(s)`,
-            data: { deletedCount }
+                success: true,
+                message: `${deletedCount} tâche(s) supprimée(s)`,
+                data: { deletedCount }
             });
         } catch (error) {
+            console.error('Erreur deleteAll:', error);
             res.status(500).json({
-            success: false,
-            error: 'Erreur lors de la suppression des tâches',
-            message: error.message
+                success: false,
+                error: 'Erreur lors de la suppression des tâches',
+                message: error.message
             });
         }
     },
