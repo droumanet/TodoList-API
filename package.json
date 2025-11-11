@@ -1,20 +1,24 @@
 {
   "name": "todolist-api",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "API REST concept with TodoList",
   "license": "ISC",
   "author": "droumanet",
   "type": "module",
   "main": "server.js",
   "scripts": {
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "test": "vitest",
     "start": "node server.js"
   },
   "dependencies": {
+    "@prisma/client": "^6.18.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "mysql2": "^3.15.3"
+    "mysql2": "^3.15.3",
+    "prisma": "^6.18.0"
   },
   "devDependencies": {
     "vitest": "^4.0.5"

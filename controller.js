@@ -1,21 +1,27 @@
 // controller.js
-import * as db from './models/database.js';
+import * as orm from './models/database.js';
 
 export default {
   readTodos: async (req, res) => {
     try {
-      const todos = await db.getAllTodos();
+      const todos = await orm.getAllTodos();
       res.json({ success: true, data: todos, count: todos.length });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Erreur lors de la récupération des tâches', message: error.message });
     }
   },
 
+/**
+ * Cette fonction lit l'ensemble une tâche de la base
+ * @param {*} req paramètre id pour trouver la tâche
+ * @param {*} res JSON format
+ * @returns 
+ */
   readTodoId: async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ success: false, error: 'ID invalide' });
-      const todo = await db.getTodoById(id);
+      const todo = await orm.getTodoById(id);
       if (!todo) return res.status(404).json({ success: false, error: 'Tâche non trouvée' });
       res.json({ success: true, data: todo });
     } catch (error) {
@@ -29,7 +35,7 @@ export default {
       if (!name || typeof name !== 'string' || name.trim() === '') {
         return res.status(400).json({ success: false, error: 'Nom requis' });
       }
-      const newTodo = await db.createTodo({ name, priority, done });
+      const newTodo = await orm.createTodo({ name, priority, done });
       res.status(201).json({ success: true, data: newTodo, message: 'Tâche créée avec succès' });
     } catch (error) {
       res.status(400).json({ success: false, error: 'Erreur lors de la création de la tâche', message: error.message });
@@ -41,7 +47,7 @@ export default {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ success: false, error: 'ID invalide' });
       const { name, priority, done } = req.body;
-      const todo = await db.replaceTodo(id, { name, priority, done });
+      const todo = await orm.replaceTodo(id, { name, priority, done });
       if (!todo) return res.status(404).json({ success: false, error: 'Tâche non trouvée' });
       res.json({ success: true, data: todo, message: 'Tâche remplacée avec succès' });
     } catch (error) {
@@ -53,7 +59,7 @@ export default {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ success: false, error: 'ID invalide' });
-      const todo = await db.updateTodo(id, req.body);
+      const todo = await orm.updateTodo(id, req.body);
       if (!todo) return res.status(404).json({ success: false, error: 'Tâche non trouvée' });
       res.json({ success: true, data: todo, message: 'Tâche modifiée avec succès' });
     } catch (error) {
@@ -65,7 +71,7 @@ export default {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ success: false, error: 'ID invalide' });
-      await db.deleteTodo(id);
+      await orm.deleteTodo(id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ success: false, error: 'Erreur lors de la suppression de la tâche', message: error.message });
@@ -74,7 +80,7 @@ export default {
 
   getStats: async (req, res) => {
     try {
-      const stats = await db.getStats();
+      const stats = await orm.getStats();
       res.json({ success: true, data: stats });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Erreur lors du calcul des statistiques', message: error.message });
@@ -83,7 +89,7 @@ export default {
 
   deleteAll: async (req, res) => {
     try {
-      const deletedCount = await db.deleteAllTodos();
+      const deletedCount = await orm.deleteAllTodos();
       res.json({ success: true, message: `${deletedCount} tâche(s) supprimée(s)`, data: { deletedCount } });
     } catch (error) {
       res.status(500).json({ success: false, error: 'Erreur lors de la suppression des tâches', message: error.message });
