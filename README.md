@@ -35,3 +35,12 @@ Aller à l'étape concernée : `git checkout etape1`
 Récupérer directement le projet à partir du TAG pour avancer sans avoir plusieurs branches
 
 Cloner l'étape concernée : `git clone --branch etape3 https://github.com/droumanet/TodoList-API.git`
+
+# Notes personnelles
+Pour créer un TAG 'base'
+```
+git add .
+git commit -m "version 1.0 : initiale"
+git tag -a base -m "version 1.0 : initiale"
+git push origin initiale
+```
