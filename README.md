@@ -41,6 +41,6 @@ Pour créer un TAG 'base'
 ```
 git add .
 git commit -m "version 1.0 : initiale"
-git tag -a base -m "version 1.0 : initiale"
+git tag -a initiale -m "version 1.0 : initiale"
 git push origin initiale
 ```

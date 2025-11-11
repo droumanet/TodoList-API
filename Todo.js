@@ -56,6 +56,11 @@ export default class Todo {
     return this.#done;
   }
   
+  /**
+   * @member {boolean} done
+   * @instance
+   * @default false
+   */
   set done(value) {
     if (typeof value !== 'boolean') {
       throw new Error('L\'état done doit être un booléen');
@@ -73,7 +78,11 @@ export default class Todo {
     };
   }
   
-  // Mise à jour pour les opérations PATCH
+  /**
+   * Met à jour les propriétés de la tâche.
+   * @param {{name?: string, priority?: number, done?: boolean}} data Données à mettre à jour
+   * @returns {this}
+   */
   update(data) {
     if (data.name !== undefined) {
       this.name = data.name;            // Utilise le setter (gère les vérifications)
