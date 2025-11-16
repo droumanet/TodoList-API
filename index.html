@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List - Démo XSS</title>
+    
+    <!-- Semantic UI CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.css">
+    
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .main-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .todo-item {
+            margin-bottom: 10px;
+        }
+        .todo-item.done .todo-name {
+            text-decoration: line-through;
+        }
+        .priority-badge {
+            display: inline-block;
+            min-width: 30px;
+        }
+        .warning-box {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-container">
+    
+    <!-- Avertissement pour la démo -->
+    <div class="ui warning message warning-box">
+        <div class="header">
+            ⚠️ Application vulnérable - Démo XSS
+        </div>
+        <p>Cette application est <strong>intentionnellement vulnérable</strong> aux attaques XSS à des fins pédagogiques.</p>
+    </div>
+
+    <!-- En-tête -->
+    <h1 class="ui center aligned icon header">
+        <i class="clipboard check icon"></i>
+        <div class="content">
+            Todo List
+            <div class="sub header">Gestion de tâches</div>
+        </div>
+    </h1>
+
+    <!-- Formulaire de création -->
+    <div class="ui segment">
+        <h3 class="ui header">
+            <i class="plus icon"></i>
+            Créer une nouvelle tâche
+        </h3>
+        
+        <form class="ui form" id="todoForm">
+            <div class="fields">
+                <div class="twelve wide field">
+                    <label>Nom de la tâche</label>
+                    <input type="text" id="todoName" placeholder="Entrez le nom de la tâche..." required>
+                </div>
+                <div class="four wide field">
+                    <label>Priorité</label>
+                    <select id="todoPriority" class="ui dropdown">
+                        <option value="1">Priorité 1</option>
+                        <option value="2">Priorité 2</option>
+                        <option value="3">Priorité 3</option>
+                    </select>
+                </div>
+            </div>
+            <button class="ui primary button" type="submit">
+                <i class="plus icon"></i>
+                Ajouter
+            </button>
+        </form>
+    </div>
+
+    <!-- Liste des todos -->
+    <div class="ui segment">
+        <h3 class="ui header">
+            <i class="list icon"></i>
+            Liste des tâches
+        </h3>
+        
+        <div id="todoList" class="ui divided items">
+            <!-- Les todos seront affichés ici -->
+        </div>
+
+        <div id="emptyMessage" class="ui message" style="display: none;">
+            <p>Aucune tâche pour le moment. Créez-en une !</p>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="messageContainer" style="position: fixed; top: 20px; right: 20px; z-index: 1000;"></div>
+
+</div>
+
+<!-- Semantic UI JS (nécessite jQuery) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.js"></script>
+
+<script>
+    const API_URL = 'http://localhost:3000/api/todos';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        $('.ui.dropdown').dropdown();
+        loadTodos();
+        document.getElementById('todoForm').addEventListener('submit', createTodo);
+    });
+    async function loadTodos() {
+        try {
+            const response = await fetch(API_URL);
+            const result = await response.json();
+            
+            if (result.success) {
+                displayTodos(result.data);
+            } else {
+                showMessage('Erreur de chargement', 'error');
+            }
+        } catch (error) {
+            showMessage('Impossible de se connecter à l\'API', 'error');
+            console.error(error);
+        }
+    }
+    function displayTodos(todos) {
+        const todoList = document.getElementById('todoList');
+        const emptyMessage = document.getElementById('emptyMessage');
+        
+        if (todos.length === 0) {
+            todoList.innerHTML = '';
+            emptyMessage.style.display = 'block';
+            return;
+        }
+        emptyMessage.style.display = 'none';
+        
+        // ⚠️ VULNÉRABILITÉ XSS : utilisation de innerHTML sans échappement !
+        todoList.innerHTML = todos.map(todo => `
+            <div class="item todo-item ${todo.done ? 'done' : ''}" data-id="${todo.id}">
+                <div class="ui grid">
+                    <div class="twelve wide column">
+                        <div class="content">
+                            <span class="ui label priority-badge ${getPriorityColor(todo.priority)}">
+                                P${todo.priority}
+                            </span>
+                            <span class="todo-name" style="margin-left: 10px; font-size: 1.1em;">
+                                ${todo.name}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="four wide column right aligned">
+                        <div class="ui buttons">
+                            <button class="ui ${todo.done ? 'green' : ''} icon button" 
+                                    onclick="toggleDone(${todo.id}, ${!todo.done})">
+                                <i class="check icon"></i>
+                            </button>
+                            <button class="ui red icon button" onclick="deleteTodo(${todo.id})">
+                                <i class="trash icon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    async function createTodo(event) {
+        event.preventDefault();
+        const name = document.getElementById('todoName').value;
+        const priority = parseInt(document.getElementById('todoPriority').value);
+        
+        if (!name.trim()) {
+            showMessage('Le nom est requis', 'warning');
+            return;
+        }
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, priority, done: false })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showMessage('Tâche créée avec succès !', 'success');
+                document.getElementById('todoName').value = '';
+                loadTodos();
+            } else {
+                showMessage(result.error, 'error');
+            }
+        } catch (error) {
+            showMessage('Erreur lors de la création', 'error');
+            console.error(error);
+        }
+    }
+    async function toggleDone(id, done) {
+        try {
+            const response = await fetch(`${API_URL}/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ done })
+            });
+            
+            if (response.ok) {
+                loadTodos();
+            }
+        } catch (error) {
+            showMessage('Erreur de mise à jour', 'error');
+        }
+    }
+    async function deleteTodo(id) {
+        if (!confirm('Supprimer cette tâche ?')) return;
+        
+        try {
+            await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            showMessage('Tâche supprimée', 'success');
+            loadTodos();
+        } catch (error) {
+            showMessage('Erreur de suppression', 'error');
+        }
+    }
+    function getPriorityColor(priority) {
+        switch(priority) {
+            case 1: return 'red';
+            case 2: return 'orange';
+            case 3: return 'blue';
+            default: return 'grey';
+        }
+    }
+    function showMessage(text, type) {
+        const container = document.getElementById('messageContainer');
+        const messageId = 'msg-' + Date.now();
+        
+        const colorClass = {
+            'success': 'green',
+            'error': 'red',
+            'warning': 'yellow',
+            'info': 'blue'
+        }[type] || 'info';
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.id = messageId;
+        messageDiv.className = `ui ${colorClass} message`;
+        messageDiv.innerHTML = `
+            <i class="close icon" onclick="document.getElementById('${messageId}').remove()"></i>
+            <div class="header">${text}</div>
+        `;
+        container.appendChild(messageDiv);
+        
+        setTimeout(() => {
+            const el = document.getElementById(messageId);
+            if (el) el.remove();
+        }, 3000);
+    }
+</script>
+
+</body>
+</html>

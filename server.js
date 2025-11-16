@@ -1,6 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import CtrlTodo from './controller.js'
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
@@ -22,6 +26,9 @@ app.delete('/api/todos/:id', CtrlTodo.deleteTodo);        // Supprimer un Todo
 // Utilitaires
 app.get('/api/stats', CtrlTodo.getStats);
 app.delete('/api/todos', CtrlTodo.deleteAll);
+app.get('/index.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 app.get('/', CtrlTodo.getDoc);
 
 // GESTION DES ERREURS 404
