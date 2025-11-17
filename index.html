@@ -237,6 +237,7 @@
         const container = document.getElementById('messageContainer');
         const messageId = 'msg-' + Date.now();
         
+        // Le type détermine la couleur
         const colorClass = {
             'success': 'green',
             'error': 'red',
@@ -256,7 +257,7 @@
         setTimeout(() => {
             const el = document.getElementById(messageId);
             if (el) el.remove();
-        }, 3000);
+        }, 6000);
     }
 </script>
 

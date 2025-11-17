@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+import { checkCreateTodo } from './validatorRules.js';
 
 const app = express();
 const PORT = 3000;
@@ -16,12 +17,12 @@ app.use(express.json());
 // ========================================
 // ROUTES REST API
 // ========================================
-app.get('/api/todos', CtrlTodo.readTodos);                // Lire la liste Todo
-app.get('/api/todos/:id', CtrlTodo.readTodoId);           // Lire détail un Todo
-app.post('/api/todos', CtrlTodo.createTodo);              // Créer un Todo
-app.put('/api/todos/:id', CtrlTodo.replaceTodo);          // Modifier (entièrement) un Todo
-app.patch('/api/todos/:id', CtrlTodo.partialReplaceTodo); // Modifier un Todo
-app.delete('/api/todos/:id', CtrlTodo.deleteTodo);        // Supprimer un Todo
+app.get('/api/todos', CtrlTodo.readTodos);                        // Lire la liste Todo
+app.get('/api/todos/:id', CtrlTodo.readTodoId);                   // Lire détail un Todo
+app.post('/api/todos', checkCreateTodo, CtrlTodo.createTodo);     // Créer un Todo
+app.put('/api/todos/:id', CtrlTodo.replaceTodo);                  // Modifier (entièrement) un Todo
+app.patch('/api/todos/:id', CtrlTodo.partialReplaceTodo);         // Modifier un Todo
+app.delete('/api/todos/:id', CtrlTodo.deleteTodo);                // Supprimer un Todo
 
 // Utilitaires
 app.get('/api/stats', CtrlTodo.getStats);

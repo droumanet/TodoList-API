@@ -1,5 +1,6 @@
 // controller.js
 import * as db from './models/database.js';
+import { body, validationResult } from 'express-validator';
 
 export default {
   readTodos: async (req, res) => {
@@ -26,9 +27,6 @@ export default {
   createTodo: async (req, res) => {
     try {
       const { name, priority, done } = req.body;
-      if (!name || typeof name !== 'string' || name.trim() === '') {
-        return res.status(400).json({ success: false, error: 'Nom requis' });
-      }
       const newTodo = await db.createTodo({ name, priority, done });
       res.status(201).json({ success: true, data: newTodo, message: 'Tâche créée avec succès' });
     } catch (error) {
