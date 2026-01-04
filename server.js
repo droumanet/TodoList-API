@@ -6,6 +6,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 import { checkCreateTodo } from './validatorRules.js';
+import helmet from 'helmet';
+import { helmetRules, rateLimitRules } from './securityRules.js';
 
 const app = express();
 const PORT = 3000;
@@ -13,6 +15,13 @@ const PORT = 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(helmet(helmetRules));
+app.use(rateLimitRules);
+
+// ========================================
+// SERVIR LES FICHIERS STATIQUES (CLIENT VUE.JS)
+// ========================================
+app.use(express.static(path.join(__dirname, 'client')));
 
 // ========================================
 // ROUTES REST API
@@ -27,8 +36,9 @@ app.delete('/api/todos/:id', CtrlTodo.deleteTodo);                // Supprimer u
 // Utilitaires
 app.get('/api/stats', CtrlTodo.getStats);
 app.delete('/api/todos', CtrlTodo.deleteAll);
-app.get('/index.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+// Route pour servir l'application Vue.js
+app.get('/app', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client', 'index.html'));
 });
 app.get('/', CtrlTodo.getDoc);
 
@@ -38,6 +48,7 @@ app.use('/*splat', CtrlTodo.defaultRoute);
 const docAPI = () => {
   console.log(`✅ Serveur API Todo démarré sur http://localhost:${PORT}`);
   console.log(`📚 Documentation disponible sur http://localhost:${PORT}`);
+  console.log(`🎨 Application Vue.js disponible sur http://localhost:${PORT}/app`);
   console.log(`\n📋 Endpoints disponibles :`);
   console.log(`   GET    /api/todos          - Lister toutes les tâches`);
   console.log(`   GET    /api/todos/:id      - Récupérer une tâche`);
