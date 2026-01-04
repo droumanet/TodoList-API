@@ -1,12 +1,19 @@
 // controller.js
-import * as orm from './models/database.js';
+import * as db from './models/database.js';
+import { body, validationResult } from 'express-validator';
+import validator from 'validator';
 
 export default {
   readTodos: async (req, res) => {
     try {
       const todos = await orm.getAllTodos();
-      res.json({ success: true, data: todos, count: todos.length });
+      const todosEscaped = todos.map(todo => ({
+            ...todo,
+            name: todo.name ? validator.escape(todo.name) : null
+      }));
+      res.json({ success: true, data: todosEscaped, count: todosEscaped.length });
     } catch (error) {
+      console.log("Erreur Lecture todos", error.message)
       res.status(500).json({ success: false, error: 'Erreur lors de la récupération des tâches', message: error.message });
     }
   },

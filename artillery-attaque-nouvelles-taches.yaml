@@ -1,0 +1,13 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 2
+      arrivalRate: 10000
+scenarios:
+  - flow:
+      - post:
+          url: "/api/todos"
+          json:
+            name: "H@ck3rz w3re h3re"
+            priority: 1
+            done: false
