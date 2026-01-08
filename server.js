@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import CtrlTodo from './controller.js'
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,9 +9,17 @@ const __dirname = path.dirname(__filename);
 import { checkCreateTodo } from './validatorRules.js';
 import helmet from 'helmet';
 import { helmetRules, rateLimitRules } from './securityRules.js';
+import https from 'https'; 
 
 const app = express();
 const PORT = 3000;
+const PORT_HTTPS = 3001;
+
+// Configuration SSL
+const sslOptions = {
+  key: fs.readFileSync(path.join(__dirname, 'ssl', 'private.key')),
+  cert: fs.readFileSync(path.join(__dirname, 'ssl', 'certificate.crt'))
+};
 
 // Middleware
 app.use(cors());
@@ -26,12 +35,13 @@ app.use(express.static(path.join(__dirname, 'client')));
 // ========================================
 // ROUTES REST API
 // ========================================
-app.get('/api/todos', CtrlTodo.readTodos);                        // Lire la liste Todo
-app.get('/api/todos/:id', CtrlTodo.readTodoId);                   // Lire détail un Todo
-app.post('/api/todos', checkCreateTodo, CtrlTodo.createTodo);     // Créer un Todo
-app.put('/api/todos/:id', CtrlTodo.replaceTodo);                  // Modifier (entièrement) un Todo
-app.patch('/api/todos/:id', CtrlTodo.partialReplaceTodo);         // Modifier un Todo
-app.delete('/api/todos/:id', CtrlTodo.deleteTodo);                // Supprimer un Todo
+app.get('/api/todos', CtrlTodo.readTodos);                              // Lire la liste Todo
+app.get('/api/todos/:id', CtrlTodo.readTodoId);                         // Lire détail un Todo
+app.post('/api/todos', CtrlTodo.verifyToken, CtrlTodo.createTodo);      // Créer un Todo
+app.put('/api/todos/:id', CtrlTodo.verifyToken, CtrlTodo.replaceTodo);  // Modifier (entièrement) un Todo
+app.patch('/api/todos/:id', CtrlTodo.verifyToken, CtrlTodo.partialReplaceTodo);         // Modifier un Todo
+app.delete('/api/todos/:id', CtrlTodo.verifyToken, CtrlTodo.deleteTodo);// Supprimer un Todo
+app.post('/api/login', CtrlTodo.login);                                 // Permettre l'authentification
 
 // Utilitaires
 app.get('/api/stats', CtrlTodo.getStats);
@@ -46,10 +56,15 @@ app.get('/', CtrlTodo.getDoc);
 app.use('/*splat', CtrlTodo.defaultRoute);
 
 const docAPI = () => {
-  console.log(`✅ Serveur API Todo démarré sur http://localhost:${PORT}`);
-  console.log(`📚 Documentation disponible sur http://localhost:${PORT}`);
-  console.log(`🎨 Application Vue.js disponible sur http://localhost:${PORT}/app`);
-  console.log(`\n📋 Endpoints disponibles :`);
+  console.log(`✅ Serveur HTTP démarré sur http://localhost:${PORT}`);
+  console.log(`🔒 Serveur HTTPS démarré sur https://localhost:${PORT_HTTPS}`);
+  console.log(`📚 Documentation disponible sur :`);
+  console.log(`   - HTTP:  http://localhost:${PORT}`);
+  console.log(`   - HTTPS: https://localhost:${PORT_HTTPS}`);
+  console.log(`🎨 Application Vue.js disponible sur :`);
+  console.log(`   - HTTP:  http://localhost:${PORT}/app`);
+  console.log(`   - HTTPS: https://localhost:${PORT_HTTPS}/app`);
+  console.log(`\n📋 Endpoints API disponibles :`);
   console.log(`   GET    /api/todos          - Lister toutes les tâches`);
   console.log(`   GET    /api/todos/:id      - Récupérer une tâche`);
   console.log(`   POST   /api/todos          - Créer une nouvelle tâche`);
@@ -61,9 +76,18 @@ const docAPI = () => {
 }
 
 // ========================================
-// DÉMARRAGE DU SERVEUR
+// DÉMARRAGE DES SERVEURS HTTP ET HTTPS
 // ========================================
 
-app.listen(PORT, docAPI);
+// Serveur HTTP (port 3000)
+const httpServer = app.listen(PORT, () => {
+  console.log(`🌐 Serveur HTTP démarré sur le port ${PORT}`);
+});
+
+// Serveur HTTPS (port 3001)
+const httpsServer = https.createServer(sslOptions, app).listen(PORT_HTTPS, () => {
+  console.log(`🔒 Serveur HTTPS démarré sur le port ${PORT_HTTPS}`);
+  docAPI();
+});
 
 export default app;
